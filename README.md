@@ -1,288 +1,104 @@
 TinyGPSPlus
 ===========
 
-A new, customizable Arduino NMEA parsing library
-
-Home
-Libraries
-TinyGPS
-NewSoftSerial
-Streaming
-PString
-Flash
-PWMServo
-IridiumSBD
-TinyGPS++
-About
-Projects
-The Reverse Geocache™ Puzzle
-Building a Puzzle Box
-Buying a Puzzle Box
-More Puzzle Box Tales
-Email:   Admin	 RSS  Subscribe:  RSS feed
-Arduiniana
-Arduino wisdom and gems by Mikal Hart
-TinyGPS++
-A *NEW* Full-featured GPS/NMEA Parser for Arduino
-TinyGPS++ is a new Arduino library for parsing NMEA data streams provided by GPS modules.
-Like its predecessor, TinyGPS, this library provides compact and easy-to-use methods for extracting position, date, time, altitude, speed, and course from consumer GPS devices. 
-However, TinyGPS++’s programmer interface is considerably simpler to use than TinyGPS, and the new library can extract arbitrary data from any of the myriad NMEA sentences out there, even proprietary ones.
-Download and Installation
-To install this library, download here, unzip the archive into the Arduino “libraries” folder, and restart Arduino.
-
-History
-TinyGPS++ is the immediate inheritor of TinyGPS, a popular compact parser that is used in Arduino installations around the world.  TinyGPS++ is not quite as ‘tiny’ as its older sibling, but its powerful and extremely easy-to-use new object model and useful new feature set make it an attractive alternative.
-Usage
-Let’s say you have an Arduino hooked to an off-the-shelf GPS device and you want to display your altitude.  You would simply create a TinyGPS++ instance like this:
-1
-2
-#include "TinyGPS++.h"
-TinyGPSPlus gps;
-Repeatedly feed it characters from your GPS device:
-1
-2
-while (ss.available() > 0)
-  gps.encode(ss.read());
-Then query it for the desired information:
-1
-2
-if (gps.altitude.isUpdated())
-  Serial.println(gps.altitude.meters());
-Differences from TinyGPS
-Although TinyGPS++ shares much the same compact parsing engine with TinyGPS, its programmer interface is somewhat more intuitive.  As a simple example, here’s how easy it is to print out the current latitude, longitude, and altitude in TinyGPS++:
-1
-2
-3
-Serial.print("LAT=");  Serial.println(gps.location.lat());
-Serial.print("LONG="); Serial.println(gps.location.lng());
-Serial.print("ALT=");  Serial.println(gps.altitude.meters());
-Both libraries extract basic position, altitude, course, time, and date, etc. from two common NMEA sentences, $GPGGA and $GPRMC. But there are a number of other interesting sentences out there, both NMEA-defined and vendor-proprietary, just waiting to be harvested.
-Consider the obscure $GPRMB, for example, which provides “recommended minimum navigation information” if you have a destination waypoint defined.
-$GPRMB,A,4.08,L,EGLL,EGLM,5130.02,N,00046.34,W,004.6,213.9,122.9,A*3D
-With TinyGPS++ it is now possible to extract just the “L” in the third field (it means “steer Left!”). It’s easy with the new TinyGPSCustom watcher object:
-1
-2
-3
-TinyGPSCustom steerDirection(gps, "GPRMB", 3);
-...
-Serial.print(steerDirection.value()); // prints "L" or "R"
-Naturally, this extra functionality comes at some cost.  TinyGPS++ consumes somewhat more memory than TinyGPS, and it’s interface is incompatible.  So how to decide whether to update?  Here’s a guide:
-Consider TinyGPS++ over TinyGPS if:
-Compatibility with existing code (using TinyGPS) isn’t necessary.
-Your sketch is not close to reaching RAM or flash resource limits.
-You are running on Due or processor which can take advantage of the higher precision of 64-bit “double” floating-point.
-You prefer the more intuitive object model.
-You need to query for NMEA data beyond the basic location, date, time, altitude, course, speed, satellites or hdop.
-Feeding the Hungry Object
-To get TinyGPS++ to work, you have to repeatedly funnel the characters to it from the GPS module using the encode() method. For example, if your GPS module is attached to pins 4(RX) and 3(TX), you might write code like this:
-1
-2
-3
-4
-5
-6
-SoftwareSerial ss(4, 3);
-void loop()
-{
-  while (ss.available() > 0)
-    gps.encode(ss.read);
-  ...
-After the object has been “fed” you can query it to see if any data fields have been updated:
-1
-2
-3
-4
-5
-6
-  if (gps.location.isUpdated())
-  {
-    Serial.print("LAT="); Serial.print(gps.location.lat(), 6);
-    Serial.print("LNG="); Serial.println(gps.location.lng(), 6);
-  }
-} // end loop()
-The TinyGPS++ Object Model
-The main TinyGPS++ object contains several core sub-objects:
-location – the latest position fix
-date – the latest date fix (UT)
-time – the latest time fix (UT)
-speed – current ground speed
-course – current ground course
-altitude – latest altitude fix
-satellites – the number of visible, participating satellites
-hdop – horizontal diminution of precision
-Each provides methods to examine its current value, sometimes in multiple formats and units. Here’s a complete list:
-1
-2
-3
-4
-5
-6
-7
-8
-9
-10
-11
-12
-13
-14
-15
-16
-17
-18
-19
-20
-21
-22
-23
-24
-25
-26
-27
-Serial.println(gps.location.lat()); // Latitude in degrees (double)
-Serial.println(gps.location.lng()); // Longitude in degrees (double)
-Serial.println(gps.location.rawLat()); // Raw lat (millionths of degree-i32)
-Serial.println(gps.location.rawLng()); // Raw long (millionths of degree-i32)
-Serial.println(gps.date.value()); // Raw date in DDMMYY format (u32)
-Serial.println(gps.date.year()); // Year (2000+) (u16)
-Serial.println(gps.date.month()); // Month (1-12) (u8)
-Serial.println(gps.date.day()); // Day (1-31) (u8)
-Serial.println(gps.time.value()); // Raw time in HHMMSSCC format (u32)
-Serial.println(gps.time.hour()); // Hour (0-23) (u8)
-Serial.println(gps.time.minute()); // Minute (0-59) (u8)
-Serial.println(gps.time.second()); // Second (0-59) (u8)
-Serial.println(gps.time.centisecond()); // 100ths of a second (0-99) (u8)
-Serial.println(gps.speed.value()); // Raw speed in 100ths of a knot (i32)
-Serial.println(gps.speed.knots()); // Speed in knots (double)
-Serial.println(gps.speed.mph()); // Speed in miles per hour (double)
-Serial.println(gps.speed.mps()); // Speed in meters per second (double)
-Serial.println(gps.speed.kmph()); // Speed in kilometers per hour (double)
-Serial.println(gps.course.value()); // Raw course in 100ths of a degree (i32)
-Serial.println(gps.course.deg()); // Course in degrees (double)
-Serial.println(gps.altitude.value()); // Raw altitude in centimeters (i32)
-Serial.println(gps.altitude.meters()); // Altitude in meters (double)
-Serial.println(gps.altitude.miles()); // Altitude in miles (double)
-Serial.println(gps.altitude.kilometers()); // Altitude in kilometers (double)
-Serial.println(gps.altitude.feet()); // Altitude in feet (double)
-Serial.println(gps.satellites.value()); // Number of satellites in use (u32)
-Serial.println(gps.hdop.value()); // Horizontal Dim. of Precision (100ths-i32)
-Validity, Update status, and Age
-You can examine an object’s value at any time, but unless TinyGPS++ has recently been fed from the GPS, it should not be considered valid and up-to-date. The isValid() method will tell you whether the object contains any valid data and is safe to query.
-Similarly, isUpdated() indicates whether the object’s value has been updated (not necessarily changed) since the last time you queried it.
-Lastly, if you want to know how stale an object’s data is, call its age() method, which returns the number of milliseconds since its last update. If this returns a value greater than 1500 or so, it may be a sign of a problem like a lost fix.
-Debugging
-When a TinyGPS++ sketch fails, it’s usually because the object received an incomplete NMEA stream, or perhaps none at all.
-Fortunately, it’s pretty easy to determine what’s going wrong using some built-in diagnostic methods:
-charsProcessed() – the total number of characters received by the object
-goodSentences() – the number of “valid” $GPRMC or $GPGGA sentences parsed
-failedChecksum() – the number of sentences of all types that failed the checksum test
-passedChecksum() – the number of sentences of all types that passed the checksum test
-If your sketch has been running a while but charsProcessed() is returning 0, you likely have a problem with your wiring or serial connection. (If data never arrives from the GPS unit, it stands to reason it’s not getting to TinyGPS++.) I often insert a little debug clause into my GPS sketches detects this condition then prints out the incoming stream:
-1
-2
-3
-4
-5
-6
-7
-8
-9
-10
-// Debug: if we haven't seen lots of data in 5 seconds, something's wrong.
-if (millis() > 5000 && gps.charsProcessed() < 10) // uh oh
-{
-  Serial.println("ERROR: not getting any GPS data!");
-  // dump the stream to Serial
-  Serial.println("GPS stream dump:");
-  while (true) // infinite loop
-    if (ss.available() > 0) // any data coming in?
-      Serial.write(ss.read());
-}
-Another common failure is when the sentences sent to TinyGPS++ are incomplete. This usually happens when you retrieve the characters from the GPS so slowly or infrequently that some are lost. The symptom is easy to spot: checksum failure.
-Explanation: Every NMEA sentence ends with a numeric field that represents a mathematical summing of all the characters in the sentence. It’s there to ensure data integrity. If this number doesn’t match the actual sum (perhaps because some characters went awry), TinyGPS++ simply discards the entire sentence and increments an internal “checksum failed” counter. You can read this counter with:
-1
-2
-3
-4
-5
-6
-Serial.print("Sentences that failed checksum=");
-Serial.println(gps.failedChecksum());
- 
-// Testing overflow in SoftwareSerial is sometimes useful too.
-Serial.print("Soft Serial device overflowed? ");
-Serial.println(ss.overflow() ? "YES!" : "No");
-If the checksum counter is continually incrementing, you have a problem. (Hint: don’t use delay() in your sketch.)
-Custom NMEA Sentence Extraction
-One of the great new features of TinyGPS++ is the ability to extract arbitrary data from any NMEA or NMEA-like sentence. Read up on some of the interesting sentences there are out there, then check to make sure that your GPS receiver can generate them.
-The idea behind custom extraction is that you tell TinyGPS++ the sentence name and the field number you are interested in, like this:
-1
-TinyGPSCustom magneticVariation(gps, "GPRMC", 10)
-This instructs TinyGPS++ to keep an eye out for $GPRMC sentences, and extract the 10th comma-separated field each time one flows by. At this point, magneticVariation is a new object just like the built-in ones. You can query it just like the others:
-1
-2
-3
-4
-5
-if (magneticVariation.isUpdated())
-{
-  Serial.print("Magnetic variation is ");
-  Serial.println(magneticVariation.value());
-}
-Establishing a fix
-TinyGPS++ objects depend on their host sketch to feed them valid and current NMEA GPS data. To ensure their world-view is continually up-to-date, three things must happen:
-You must continually feed the object serial NMEA data with encode().
-The NMEA sentences must pass the checksum test.
-For built-in (non-custom) objects, the NMEA sentences must self-report themselves as valid. That is, if the $GPRMC sentence reports a validity of “V” (void) instead of “A” (active), or if the $GPGGA sentence reports fix type “0″ (no fix), then they are discarded.
-It may take several minutes for a device to establish a fix, especially it has traveled some distance or a long time has elapsed since its last use.
-Distance and Course
-If your application has some notion of a “waypoint” or destination, it is sometimes useful to be able to calculate the distance to that waypoint and the direction, or “course”, you must travel to get there. TinyGPS++ provides two methods to get this information, and a third (cardinal()) to display the course in friendly, human-readable compass directions.
-1
-2
-3
-4
-5
-6
-7
-8
-9
-10
-11
-12
-13
-14
-15
-16
-17
-18
-19
-20
-const double EIFFEL_TOWER_LAT = 48.85826;
-const double EIFFEL_TOWER_LNG = 2.294516;
-double distanceKm =
-  TinyGPSPlus.distanceTo(
-    gps.location.lat(),
-    gps.location.lng(),
-    EIFFEL_TOWER_LAT,
-    EIFFEL_TOWER_LNG) / 1000.0;
-double courseTo =
-  TinyGPSPlus.courseTo(
-    gps.location.lat(),
-    gps.location.lng(),
-    EIFFEL_TOWER_LAT,
-    EIFFEL_TOWER_LNG);
-Serial.print("Distance (km) to Eiffel Tower: ");
-Serial.println(distanceKm);
-Serial.print("Course to Eiffel Tower: ");
-Serial.println(courseTo);
-Serial.print("Human directions: ");
-Serial.println(TinyGPSPlus.cardinal(courseTo));
-Library Version
-You can retrieve the version of the TinyGPS++ library by calling the static member libraryVersion().
-1
-int ver = TinyGPSPlus::libraryVersion();
-Sample Sketches
-TinyGPS++ ships with several sample sketch which range from the simple to the more elaborate. Start with BasicExample, which demonstrates library basics without even requiring a GPS device, then move onto FullExample and KitchenSink. Later, see if you can understand how to do custom extractions with some of the other examples.
-Acknowledgements
-Thanks go out to the many Arduino forum users for outstanding help in testing and popularizing TinyGPS, this library’s predecessor. Thanks especially to Maarten Lamers, who wrote the wiring library that originally gave me the idea of how to organize TinyGPS++.
-All input is appreciated.
-Mikal Hart
+<div class="entry">
+				
+			    <h3>A *NEW* Full-featured GPS/NMEA Parser for Arduino</h3>
+<p>TinyGPS++ is a new Arduino library for parsing NMEA data streams provided by GPS modules.</p>
+<p>Like its predecessor, TinyGPS, this library provides compact and easy-to-use methods for extracting position, date, time, altitude, speed, and course from consumer GPS devices.&nbsp; </p>
+<p>However, TinyGPS++’s programmer interface is considerably simpler to use than TinyGPS, and the new library can extract arbitrary data from any of the myriad NMEA sentences out there, even proprietary ones.</p>
+<h3>Download and Installation</h3>
+<p>To install this library, download here, unzip the archive into the Arduino “libraries” folder, and restart Arduino.<br>
+<a href="https://github.com/mikalhart/TinyGPSPlus/releases"><img src="http://arduiniana.org/wp-content/uploads/2013/09/green-download-button-150x150.jpg" alt="Download" title="Download" width="150" height="150" class="aligncenter size-thumbnail wp-image-1357"></a><br>
+</p><h3>History</h3>
+<p>TinyGPS++ is the immediate inheritor of <a title="TinyGPS" href="http://arduiniana.org/libraries/tinygps/" target="_blank">TinyGPS</a>, a popular compact parser that is used in Arduino installations around the world. &nbsp;TinyGPS++ is not quite as ‘tiny’ as its older sibling, but its powerful and extremely easy-to-use new object model and useful new feature set make it an attractive alternative.</p>
+<h3>Usage</h3>
+<p>Let’s say you have an Arduino hooked to an off-the-shelf GPS device and you want to display your altitude. &nbsp;You would simply create a TinyGPS++ instance like this:</p>
+<div><div id="highlighter_955151" class="syntaxhighlighter  cpp"><table border="0" cellpadding="0" cellspacing="0"><tbody><tr><td class="gutter"><div class="line number1 index0 alt2">1</div><div class="line number2 index1 alt1">2</div></td><td class="code"><div class="container"><div class="line number1 index0 alt2"><code class="cpp preprocessor">#include "TinyGPS++.h"</code></div><div class="line number2 index1 alt1"><code class="cpp plain">TinyGPSPlus gps;</code></div></div></td></tr></tbody></table></div></div>
+<p>Repeatedly feed it characters from your GPS device:</p>
+<div><div id="highlighter_568488" class="syntaxhighlighter  cpp"><table border="0" cellpadding="0" cellspacing="0"><tbody><tr><td class="gutter"><div class="line number1 index0 alt2">1</div><div class="line number2 index1 alt1">2</div></td><td class="code"><div class="container"><div class="line number1 index0 alt2"><code class="cpp keyword bold">while</code> <code class="cpp plain">(ss.available() &gt; 0)</code></div><div class="line number2 index1 alt1"><code class="cpp spaces">&nbsp;&nbsp;</code><code class="cpp plain">gps.encode(ss.read());</code></div></div></td></tr></tbody></table></div></div>
+<p>Then query it for the desired information:</p>
+<div><div id="highlighter_783011" class="syntaxhighlighter  cpp"><table border="0" cellpadding="0" cellspacing="0"><tbody><tr><td class="gutter"><div class="line number1 index0 alt2">1</div><div class="line number2 index1 alt1">2</div></td><td class="code"><div class="container"><div class="line number1 index0 alt2"><code class="cpp keyword bold">if</code> <code class="cpp plain">(gps.altitude.isUpdated())</code></div><div class="line number2 index1 alt1"><code class="cpp spaces">&nbsp;&nbsp;</code><code class="cpp plain">Serial.println(gps.altitude.meters());</code></div></div></td></tr></tbody></table></div></div>
+<h3>Differences from TinyGPS</h3>
+<p>Although TinyGPS++ shares much the same compact parsing engine with TinyGPS, its programmer interface is somewhat more intuitive. &nbsp;As a simple example, here’s how easy it is to print out the current latitude, longitude, and altitude in TinyGPS++:</p>
+<div><div id="highlighter_592805" class="syntaxhighlighter  cpp"><table border="0" cellpadding="0" cellspacing="0"><tbody><tr><td class="gutter"><div class="line number1 index0 alt2">1</div><div class="line number2 index1 alt1">2</div><div class="line number3 index2 alt2">3</div></td><td class="code"><div class="container"><div class="line number1 index0 alt2"><code class="cpp plain">Serial.print(</code><code class="cpp string">"LAT="</code><code class="cpp plain">);&nbsp; Serial.println(gps.location.lat());</code></div><div class="line number2 index1 alt1"><code class="cpp plain">Serial.print(</code><code class="cpp string">"LONG="</code><code class="cpp plain">); Serial.println(gps.location.lng());</code></div><div class="line number3 index2 alt2"><code class="cpp plain">Serial.print(</code><code class="cpp string">"ALT="</code><code class="cpp plain">);&nbsp; Serial.println(gps.altitude.meters());</code></div></div></td></tr></tbody></table></div></div>
+<p>Both libraries extract basic position, altitude, course, time, and date, etc. from two common NMEA sentences,  <strong>$GPGGA</strong> and <strong>$GPRMC</strong>.  But there are a number of other interesting sentences out there, both NMEA-defined and vendor-proprietary, just waiting to be harvested.</p>
+<p>Consider the obscure <strong><a title="GPRMB" href="http://aprs.gids.nl/nmea/#rmb" target="_blank">$GPRMB</a></strong>, for example, which provides “recommended minimum navigation information” if you have a destination waypoint defined.</p>
+<pre>$GPRMB,A,4.08,L,EGLL,EGLM,5130.02,N,00046.34,W,004.6,213.9,122.9,A*3D</pre>
+<p>With TinyGPS++ it is now possible to extract just the “L” in the third field (it means “steer <strong>L</strong>eft!”).  It’s easy with the new TinyGPSCustom watcher object:</p>
+<div><div id="highlighter_840347" class="syntaxhighlighter  cpp"><table border="0" cellpadding="0" cellspacing="0"><tbody><tr><td class="gutter"><div class="line number1 index0 alt2">1</div><div class="line number2 index1 alt1">2</div><div class="line number3 index2 alt2">3</div></td><td class="code"><div class="container"><div class="line number1 index0 alt2"><code class="cpp plain">TinyGPSCustom steerDirection(gps, </code><code class="cpp string">"GPRMB"</code><code class="cpp plain">, 3);</code></div><div class="line number2 index1 alt1"><code class="cpp plain">...</code></div><div class="line number3 index2 alt2"><code class="cpp plain">Serial.print(steerDirection.value()); </code><code class="cpp comments">// prints "L" or "R"</code></div></div></td></tr></tbody></table></div></div>
+<p>Naturally, this extra functionality comes at some cost.&nbsp; TinyGPS++ consumes somewhat more memory than TinyGPS, and it’s interface is incompatible.&nbsp; So how to decide whether to update?&nbsp; Here’s a guide:</p>
+<p>Consider TinyGPS++ over TinyGPS if:</p>
+<ul>
+<li>Compatibility with existing code (using TinyGPS) isn’t necessary.</li>
+<li>Your sketch is not close to reaching RAM or flash resource limits.</li>
+<li>You are running on Due or processor which can take advantage of the higher precision of 64-bit “double” floating-point.</li>
+<li>You prefer the more intuitive object model.</li>
+<li>You need to query for NMEA data beyond the basic location, date, time, altitude, course, speed, satellites or hdop.</li>
+</ul>
+<h3>Feeding the Hungry Object</h3>
+<p>To get TinyGPS++ to work, you have to repeatedly funnel the characters to it from the GPS module using the <strong>encode()</strong> method. For example, if your GPS module is attached to pins 4(RX) and 3(TX), you might write code like this:</p>
+<div><div id="highlighter_585453" class="syntaxhighlighter  cpp"><table border="0" cellpadding="0" cellspacing="0"><tbody><tr><td class="gutter"><div class="line number1 index0 alt2">1</div><div class="line number2 index1 alt1">2</div><div class="line number3 index2 alt2">3</div><div class="line number4 index3 alt1">4</div><div class="line number5 index4 alt2">5</div><div class="line number6 index5 alt1">6</div></td><td class="code"><div class="container"><div class="line number1 index0 alt2"><code class="cpp plain">SoftwareSerial ss(4, 3);</code></div><div class="line number2 index1 alt1"><code class="cpp keyword bold">void</code> <code class="cpp plain">loop()</code></div><div class="line number3 index2 alt2"><code class="cpp plain">{</code></div><div class="line number4 index3 alt1"><code class="cpp spaces">&nbsp;&nbsp;</code><code class="cpp keyword bold">while</code> <code class="cpp plain">(ss.available() &gt; 0)</code></div><div class="line number5 index4 alt2"><code class="cpp spaces">&nbsp;&nbsp;&nbsp;&nbsp;</code><code class="cpp plain">gps.encode(ss.read);</code></div><div class="line number6 index5 alt1"><code class="cpp spaces">&nbsp;&nbsp;</code><code class="cpp plain">...</code></div></div></td></tr></tbody></table></div></div>
+<p>After the object has been “fed” you can query it to see if any data fields have been updated:</p>
+<div><div id="highlighter_418140" class="syntaxhighlighter  cpp"><table border="0" cellpadding="0" cellspacing="0"><tbody><tr><td class="gutter"><div class="line number1 index0 alt2">1</div><div class="line number2 index1 alt1">2</div><div class="line number3 index2 alt2">3</div><div class="line number4 index3 alt1">4</div><div class="line number5 index4 alt2">5</div><div class="line number6 index5 alt1">6</div></td><td class="code"><div class="container"><div class="line number1 index0 alt2"><code class="cpp spaces">&nbsp;&nbsp;</code><code class="cpp keyword bold">if</code> <code class="cpp plain">(gps.location.isUpdated())</code></div><div class="line number2 index1 alt1"><code class="cpp spaces">&nbsp;&nbsp;</code><code class="cpp plain">{</code></div><div class="line number3 index2 alt2"><code class="cpp spaces">&nbsp;&nbsp;&nbsp;&nbsp;</code><code class="cpp plain">Serial.print(</code><code class="cpp string">"LAT="</code><code class="cpp plain">); Serial.print(gps.location.lat(), 6);</code></div><div class="line number4 index3 alt1"><code class="cpp spaces">&nbsp;&nbsp;&nbsp;&nbsp;</code><code class="cpp plain">Serial.print(</code><code class="cpp string">"LNG="</code><code class="cpp plain">); Serial.println(gps.location.lng(), 6);</code></div><div class="line number5 index4 alt2"><code class="cpp spaces">&nbsp;&nbsp;</code><code class="cpp plain">}</code></div><div class="line number6 index5 alt1"><code class="cpp plain">} </code><code class="cpp comments">// end loop()</code></div></div></td></tr></tbody></table></div></div>
+<h3>The TinyGPS++ Object Model</h3>
+<p>The main TinyGPS++ object contains several core sub-objects:</p>
+<ul>
+<li><b>location</b> – the latest position fix</li>
+<li><b>date</b> – the latest date fix (UT)</li>
+<li><b>time</b> – the latest time fix (UT)</li>
+<li><b>speed</b> – current ground speed</li>
+<li><b>course</b> – current ground course</li>
+<li><b>altitude</b> – latest altitude fix</li>
+<li><b>satellites</b> – the number of visible, participating satellites</li>
+<li><b>hdop</b> – horizontal diminution of precision</li>
+</ul>
+<p>Each provides methods to examine its current value, sometimes in multiple formats and units. Here’s a complete list:</p>
+<div><div id="highlighter_828343" class="syntaxhighlighter  cpp"><table border="0" cellpadding="0" cellspacing="0"><tbody><tr><td class="gutter"><div class="line number1 index0 alt2">1</div><div class="line number2 index1 alt1">2</div><div class="line number3 index2 alt2">3</div><div class="line number4 index3 alt1">4</div><div class="line number5 index4 alt2">5</div><div class="line number6 index5 alt1">6</div><div class="line number7 index6 alt2">7</div><div class="line number8 index7 alt1">8</div><div class="line number9 index8 alt2">9</div><div class="line number10 index9 alt1">10</div><div class="line number11 index10 alt2">11</div><div class="line number12 index11 alt1">12</div><div class="line number13 index12 alt2">13</div><div class="line number14 index13 alt1">14</div><div class="line number15 index14 alt2">15</div><div class="line number16 index15 alt1">16</div><div class="line number17 index16 alt2">17</div><div class="line number18 index17 alt1">18</div><div class="line number19 index18 alt2">19</div><div class="line number20 index19 alt1">20</div><div class="line number21 index20 alt2">21</div><div class="line number22 index21 alt1">22</div><div class="line number23 index22 alt2">23</div><div class="line number24 index23 alt1">24</div><div class="line number25 index24 alt2">25</div><div class="line number26 index25 alt1">26</div><div class="line number27 index26 alt2">27</div></td><td class="code"><div class="container"><div class="line number1 index0 alt2"><code class="cpp plain">Serial.println(gps.location.lat()); </code><code class="cpp comments">// Latitude in degrees (double)</code></div><div class="line number2 index1 alt1"><code class="cpp plain">Serial.println(gps.location.lng()); </code><code class="cpp comments">// Longitude in degrees (double)</code></div><div class="line number3 index2 alt2"><code class="cpp plain">Serial.println(gps.location.rawLat()); </code><code class="cpp comments">// Raw lat (millionths of degree-i32)</code></div><div class="line number4 index3 alt1"><code class="cpp plain">Serial.println(gps.location.rawLng()); </code><code class="cpp comments">// Raw long (millionths of degree-i32)</code></div><div class="line number5 index4 alt2"><code class="cpp plain">Serial.println(gps.date.value()); </code><code class="cpp comments">// Raw date in DDMMYY format (u32)</code></div><div class="line number6 index5 alt1"><code class="cpp plain">Serial.println(gps.date.year()); </code><code class="cpp comments">// Year (2000+) (u16)</code></div><div class="line number7 index6 alt2"><code class="cpp plain">Serial.println(gps.date.month()); </code><code class="cpp comments">// Month (1-12) (u8)</code></div><div class="line number8 index7 alt1"><code class="cpp plain">Serial.println(gps.date.day()); </code><code class="cpp comments">// Day (1-31) (u8)</code></div><div class="line number9 index8 alt2"><code class="cpp plain">Serial.println(gps.</code><code class="cpp functions bold">time</code><code class="cpp plain">.value()); </code><code class="cpp comments">// Raw time in HHMMSSCC format (u32)</code></div><div class="line number10 index9 alt1"><code class="cpp plain">Serial.println(gps.</code><code class="cpp functions bold">time</code><code class="cpp plain">.hour()); </code><code class="cpp comments">// Hour (0-23) (u8)</code></div><div class="line number11 index10 alt2"><code class="cpp plain">Serial.println(gps.</code><code class="cpp functions bold">time</code><code class="cpp plain">.minute()); </code><code class="cpp comments">// Minute (0-59) (u8)</code></div><div class="line number12 index11 alt1"><code class="cpp plain">Serial.println(gps.</code><code class="cpp functions bold">time</code><code class="cpp plain">.second()); </code><code class="cpp comments">// Second (0-59) (u8)</code></div><div class="line number13 index12 alt2"><code class="cpp plain">Serial.println(gps.</code><code class="cpp functions bold">time</code><code class="cpp plain">.centisecond()); </code><code class="cpp comments">// 100ths of a second (0-99) (u8)</code></div><div class="line number14 index13 alt1"><code class="cpp plain">Serial.println(gps.speed.value()); </code><code class="cpp comments">// Raw speed in 100ths of a knot (i32)</code></div><div class="line number15 index14 alt2"><code class="cpp plain">Serial.println(gps.speed.knots()); </code><code class="cpp comments">// Speed in knots (double)</code></div><div class="line number16 index15 alt1"><code class="cpp plain">Serial.println(gps.speed.mph()); </code><code class="cpp comments">// Speed in miles per hour (double)</code></div><div class="line number17 index16 alt2"><code class="cpp plain">Serial.println(gps.speed.mps()); </code><code class="cpp comments">// Speed in meters per second (double)</code></div><div class="line number18 index17 alt1"><code class="cpp plain">Serial.println(gps.speed.kmph()); </code><code class="cpp comments">// Speed in kilometers per hour (double)</code></div><div class="line number19 index18 alt2"><code class="cpp plain">Serial.println(gps.course.value()); </code><code class="cpp comments">// Raw course in 100ths of a degree (i32)</code></div><div class="line number20 index19 alt1"><code class="cpp plain">Serial.println(gps.course.deg()); </code><code class="cpp comments">// Course in degrees (double)</code></div><div class="line number21 index20 alt2"><code class="cpp plain">Serial.println(gps.altitude.value()); </code><code class="cpp comments">// Raw altitude in centimeters (i32)</code></div><div class="line number22 index21 alt1"><code class="cpp plain">Serial.println(gps.altitude.meters()); </code><code class="cpp comments">// Altitude in meters (double)</code></div><div class="line number23 index22 alt2"><code class="cpp plain">Serial.println(gps.altitude.miles()); </code><code class="cpp comments">// Altitude in miles (double)</code></div><div class="line number24 index23 alt1"><code class="cpp plain">Serial.println(gps.altitude.kilometers()); </code><code class="cpp comments">// Altitude in kilometers (double)</code></div><div class="line number25 index24 alt2"><code class="cpp plain">Serial.println(gps.altitude.feet()); </code><code class="cpp comments">// Altitude in feet (double)</code></div><div class="line number26 index25 alt1"><code class="cpp plain">Serial.println(gps.satellites.value()); </code><code class="cpp comments">// Number of satellites in use (u32)</code></div><div class="line number27 index26 alt2"><code class="cpp plain">Serial.println(gps.hdop.value()); </code><code class="cpp comments">// Horizontal Dim. of Precision (100ths-i32)</code></div></div></td></tr></tbody></table></div></div>
+<h3>Validity, Update status, and Age</h3>
+<p>You can examine an object’s value at any time, but unless TinyGPS++ has recently been fed from the GPS, it should not be considered valid and up-to-date.  The <b>isValid()</b> method will tell you whether the object contains any valid data and is safe to query.</p>
+<p>Similarly, <b>isUpdated()</b> indicates whether the object’s value has been updated (not necessarily <i>changed</i>) since the last time you queried it.</p>
+<p>Lastly, if you want to know how stale an object’s data is, call its <b>age()</b> method, which returns the number of milliseconds since its last update.  If this returns a value greater than 1500 or so, it may be a sign of a problem like a lost fix.</p>
+<h3>Debugging</h3>
+<p>When a TinyGPS++ sketch fails, it’s usually because the object received an incomplete NMEA stream, or perhaps none at all.</p>
+<p>Fortunately, it’s pretty easy to determine what’s going wrong using some built-in diagnostic methods:</p>
+<ul>
+<li><strong>charsProcessed()</strong> – the total number of characters received by the object</li>
+<li><strong>goodSentences()</strong> – the number of “valid” $GPRMC or $GPGGA sentences parsed</li>
+<li><strong>failedChecksum()</strong> – the number of sentences of all types that failed the checksum test</li>
+<li><strong>passedChecksum()</strong> – the number of sentences of all types that passed the checksum test</li>
+</ul>
+<p>If your sketch has been running a while but charsProcessed() is returning 0, you likely have a problem with your wiring or serial connection.  (If data never arrives from the GPS unit, it stands to reason it’s not getting to TinyGPS++.)  I often insert a little debug clause into my GPS sketches detects this condition then prints out the incoming stream:</p>
+<div><div id="highlighter_728394" class="syntaxhighlighter  cpp"><table border="0" cellpadding="0" cellspacing="0"><tbody><tr><td class="gutter"><div class="line number1 index0 alt2">1</div><div class="line number2 index1 alt1">2</div><div class="line number3 index2 alt2">3</div><div class="line number4 index3 alt1">4</div><div class="line number5 index4 alt2">5</div><div class="line number6 index5 alt1">6</div><div class="line number7 index6 alt2">7</div><div class="line number8 index7 alt1">8</div><div class="line number9 index8 alt2">9</div><div class="line number10 index9 alt1">10</div></td><td class="code"><div class="container"><div class="line number1 index0 alt2"><code class="cpp comments">// Debug: if we haven't seen lots of data in 5 seconds, something's wrong.</code></div><div class="line number2 index1 alt1"><code class="cpp keyword bold">if</code> <code class="cpp plain">(millis() &gt; 5000 &amp;&amp; gps.charsProcessed() &lt; 10) </code><code class="cpp comments">// uh oh</code></div><div class="line number3 index2 alt2"><code class="cpp plain">{</code></div><div class="line number4 index3 alt1"><code class="cpp spaces">&nbsp;&nbsp;</code><code class="cpp plain">Serial.println(</code><code class="cpp string">"ERROR: not getting any GPS data!"</code><code class="cpp plain">);</code></div><div class="line number5 index4 alt2"><code class="cpp spaces">&nbsp;&nbsp;</code><code class="cpp comments">// dump the stream to Serial</code></div><div class="line number6 index5 alt1"><code class="cpp spaces">&nbsp;&nbsp;</code><code class="cpp plain">Serial.println(</code><code class="cpp string">"GPS stream dump:"</code><code class="cpp plain">);</code></div><div class="line number7 index6 alt2"><code class="cpp spaces">&nbsp;&nbsp;</code><code class="cpp keyword bold">while</code> <code class="cpp plain">(</code><code class="cpp keyword bold">true</code><code class="cpp plain">) </code><code class="cpp comments">// infinite loop</code></div><div class="line number8 index7 alt1"><code class="cpp spaces">&nbsp;&nbsp;&nbsp;&nbsp;</code><code class="cpp keyword bold">if</code> <code class="cpp plain">(ss.available() &gt; 0) </code><code class="cpp comments">// any data coming in?</code></div><div class="line number9 index8 alt2"><code class="cpp spaces">&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;</code><code class="cpp plain">Serial.write(ss.read());</code></div><div class="line number10 index9 alt1"><code class="cpp plain">}</code></div></div></td></tr></tbody></table></div></div>
+<p>Another common failure is when the sentences sent to TinyGPS++ are incomplete.  This usually happens when you retrieve the characters from the GPS so slowly or infrequently that some are lost.  The symptom is easy to spot: <strong>checksum failure</strong>.</p>
+<p>Explanation: Every NMEA sentence ends with a numeric field that represents a mathematical summing of all the characters in the sentence.  It’s there to ensure data integrity.  If this number doesn’t match the actual sum (perhaps because some characters went awry), TinyGPS++ simply discards the entire sentence and increments an internal “checksum failed” counter.  You can read this counter with:</p>
+<div><div id="highlighter_177703" class="syntaxhighlighter  cpp"><table border="0" cellpadding="0" cellspacing="0"><tbody><tr><td class="gutter"><div class="line number1 index0 alt2">1</div><div class="line number2 index1 alt1">2</div><div class="line number3 index2 alt2">3</div><div class="line number4 index3 alt1">4</div><div class="line number5 index4 alt2">5</div><div class="line number6 index5 alt1">6</div></td><td class="code"><div class="container"><div class="line number1 index0 alt2"><code class="cpp plain">Serial.print(</code><code class="cpp string">"Sentences that failed checksum="</code><code class="cpp plain">);</code></div><div class="line number2 index1 alt1"><code class="cpp plain">Serial.println(gps.failedChecksum());</code></div><div class="line number3 index2 alt2">&nbsp;</div><div class="line number4 index3 alt1"><code class="cpp comments">// Testing overflow in SoftwareSerial is sometimes useful too.</code></div><div class="line number5 index4 alt2"><code class="cpp plain">Serial.print(</code><code class="cpp string">"Soft Serial device overflowed? "</code><code class="cpp plain">);</code></div><div class="line number6 index5 alt1"><code class="cpp plain">Serial.println(ss.overflow() ? </code><code class="cpp string">"YES!"</code> <code class="cpp plain">: </code><code class="cpp string">"No"</code><code class="cpp plain">);</code></div></div></td></tr></tbody></table></div></div>
+<p>If the checksum counter is continually incrementing, you have a problem.  (Hint: don’t use <strong>delay()</strong> in your sketch.)</p>
+<h3>Custom NMEA Sentence Extraction</h3>
+<p>One of the great new features of TinyGPS++ is the ability to extract arbitrary data from <i>any</i> NMEA or NMEA-like sentence.  Read up on some of the <a href="http://aprs.gids.nl/nmea/" title="NMEA sentences" target="_blank">interesting sentences</a> there are out there, then check to make sure that your GPS receiver can generate them.</p>
+<p>The idea behind custom extraction is that you tell TinyGPS++ the sentence name and the field number you are interested in, like this:</p>
+<div><div id="highlighter_287085" class="syntaxhighlighter  cpp"><table border="0" cellpadding="0" cellspacing="0"><tbody><tr><td class="gutter"><div class="line number1 index0 alt2">1</div></td><td class="code"><div class="container"><div class="line number1 index0 alt2"><code class="cpp plain">TinyGPSCustom magneticVariation(gps, </code><code class="cpp string">"GPRMC"</code><code class="cpp plain">, 10)</code></div></div></td></tr></tbody></table></div></div>
+<p>This instructs TinyGPS++ to keep an eye out for $GPRMC sentences, and extract the 10th comma-separated field each time one flows by.  At this point, magneticVariation is a new object just like the built-in ones.  You can query it just like the others:</p>
+<div><div id="highlighter_986784" class="syntaxhighlighter  cpp"><table border="0" cellpadding="0" cellspacing="0"><tbody><tr><td class="gutter"><div class="line number1 index0 alt2">1</div><div class="line number2 index1 alt1">2</div><div class="line number3 index2 alt2">3</div><div class="line number4 index3 alt1">4</div><div class="line number5 index4 alt2">5</div></td><td class="code"><div class="container"><div class="line number1 index0 alt2"><code class="cpp keyword bold">if</code> <code class="cpp plain">(magneticVariation.isUpdated())</code></div><div class="line number2 index1 alt1"><code class="cpp plain">{</code></div><div class="line number3 index2 alt2"><code class="cpp spaces">&nbsp;&nbsp;</code><code class="cpp plain">Serial.print(</code><code class="cpp string">"Magnetic variation is "</code><code class="cpp plain">);</code></div><div class="line number4 index3 alt1"><code class="cpp spaces">&nbsp;&nbsp;</code><code class="cpp plain">Serial.println(magneticVariation.value());</code></div><div class="line number5 index4 alt2"><code class="cpp plain">}</code></div></div></td></tr></tbody></table></div></div>
+<h3>Establishing a fix</h3>
+<p>TinyGPS++ objects depend on their host sketch to feed them valid and current NMEA GPS data. To ensure their world-view is continually up-to-date, three things must happen:</p>
+<ol>
+<li>You must continually feed the object serial NMEA data with <strong>encode()</strong>.</li>
+<li>The NMEA sentences must pass the checksum test.</li>
+<li>For built-in (non-custom) objects, the NMEA sentences must self-report themselves as valid. That is, if the $GPRMC sentence reports a validity of “V” (void) instead of “A” (active), or if the $GPGGA sentence reports fix type “0″ (no fix), then they are discarded.</li>
+</ol>
+<p>It may take several minutes for a device to establish a fix, especially it has traveled some distance or a long time has elapsed since its last use.</p>
+<h3>Distance and Course</h3>
+<p>If your application has some notion of a “waypoint” or destination, it is sometimes useful to be able to calculate the distance to that waypoint and the direction, or “course”, you must travel to get there.  TinyGPS++ provides two methods to get this information, and a third (<strong>cardinal()</strong>) to display the course in friendly, human-readable compass directions.</p>
+<div><div id="highlighter_458899" class="syntaxhighlighter  cpp"><table border="0" cellpadding="0" cellspacing="0"><tbody><tr><td class="gutter"><div class="line number1 index0 alt2">1</div><div class="line number2 index1 alt1">2</div><div class="line number3 index2 alt2">3</div><div class="line number4 index3 alt1">4</div><div class="line number5 index4 alt2">5</div><div class="line number6 index5 alt1">6</div><div class="line number7 index6 alt2">7</div><div class="line number8 index7 alt1">8</div><div class="line number9 index8 alt2">9</div><div class="line number10 index9 alt1">10</div><div class="line number11 index10 alt2">11</div><div class="line number12 index11 alt1">12</div><div class="line number13 index12 alt2">13</div><div class="line number14 index13 alt1">14</div><div class="line number15 index14 alt2">15</div><div class="line number16 index15 alt1">16</div><div class="line number17 index16 alt2">17</div><div class="line number18 index17 alt1">18</div><div class="line number19 index18 alt2">19</div><div class="line number20 index19 alt1">20</div></td><td class="code"><div class="container"><div class="line number1 index0 alt2"><code class="cpp keyword bold">const</code> <code class="cpp color1 bold">double</code> <code class="cpp plain">EIFFEL_TOWER_LAT = 48.85826;</code></div><div class="line number2 index1 alt1"><code class="cpp keyword bold">const</code> <code class="cpp color1 bold">double</code> <code class="cpp plain">EIFFEL_TOWER_LNG = 2.294516;</code></div><div class="line number3 index2 alt2"><code class="cpp color1 bold">double</code> <code class="cpp plain">distanceKm =</code></div><div class="line number4 index3 alt1"><code class="cpp spaces">&nbsp;&nbsp;</code><code class="cpp plain">TinyGPSPlus.distanceTo(</code></div><div class="line number5 index4 alt2"><code class="cpp spaces">&nbsp;&nbsp;&nbsp;&nbsp;</code><code class="cpp plain">gps.location.lat(),</code></div><div class="line number6 index5 alt1"><code class="cpp spaces">&nbsp;&nbsp;&nbsp;&nbsp;</code><code class="cpp plain">gps.location.lng(),</code></div><div class="line number7 index6 alt2"><code class="cpp spaces">&nbsp;&nbsp;&nbsp;&nbsp;</code><code class="cpp plain">EIFFEL_TOWER_LAT,</code></div><div class="line number8 index7 alt1"><code class="cpp spaces">&nbsp;&nbsp;&nbsp;&nbsp;</code><code class="cpp plain">EIFFEL_TOWER_LNG) / 1000.0;</code></div><div class="line number9 index8 alt2"><code class="cpp color1 bold">double</code> <code class="cpp plain">courseTo =</code></div><div class="line number10 index9 alt1"><code class="cpp spaces">&nbsp;&nbsp;</code><code class="cpp plain">TinyGPSPlus.courseTo(</code></div><div class="line number11 index10 alt2"><code class="cpp spaces">&nbsp;&nbsp;&nbsp;&nbsp;</code><code class="cpp plain">gps.location.lat(),</code></div><div class="line number12 index11 alt1"><code class="cpp spaces">&nbsp;&nbsp;&nbsp;&nbsp;</code><code class="cpp plain">gps.location.lng(),</code></div><div class="line number13 index12 alt2"><code class="cpp spaces">&nbsp;&nbsp;&nbsp;&nbsp;</code><code class="cpp plain">EIFFEL_TOWER_LAT,</code></div><div class="line number14 index13 alt1"><code class="cpp spaces">&nbsp;&nbsp;&nbsp;&nbsp;</code><code class="cpp plain">EIFFEL_TOWER_LNG);</code></div><div class="line number15 index14 alt2"><code class="cpp plain">Serial.print(</code><code class="cpp string">"Distance (km) to Eiffel Tower: "</code><code class="cpp plain">);</code></div><div class="line number16 index15 alt1"><code class="cpp plain">Serial.println(distanceKm);</code></div><div class="line number17 index16 alt2"><code class="cpp plain">Serial.print(</code><code class="cpp string">"Course to Eiffel Tower: "</code><code class="cpp plain">);</code></div><div class="line number18 index17 alt1"><code class="cpp plain">Serial.println(courseTo);</code></div><div class="line number19 index18 alt2"><code class="cpp plain">Serial.print(</code><code class="cpp string">"Human directions: "</code><code class="cpp plain">);</code></div><div class="line number20 index19 alt1"><code class="cpp plain">Serial.println(TinyGPSPlus.cardinal(courseTo));</code></div></div></td></tr></tbody></table></div></div>
+<h3>Library Version</h3>
+<p>You can retrieve the version of the TinyGPS++ library by calling the static member <strong>libraryVersion()</strong>.</p>
+<div><div id="highlighter_478734" class="syntaxhighlighter  cpp"><table border="0" cellpadding="0" cellspacing="0"><tbody><tr><td class="gutter"><div class="line number1 index0 alt2">1</div></td><td class="code"><div class="container"><div class="line number1 index0 alt2"><code class="cpp color1 bold">int</code> <code class="cpp plain">ver = TinyGPSPlus::libraryVersion();</code></div></div></td></tr></tbody></table></div></div>
+<h3>Sample Sketches</h3>
+<p>TinyGPS++ ships with several sample sketch which range from the simple to the more elaborate.  Start with <strong>BasicExample</strong>, which demonstrates library basics without even requiring a GPS device, then move onto <strong>FullExample</strong> and <strong>KitchenSink</strong>.  Later, see if you can understand how to do custom extractions with some of the other examples.</p>
+<h3>Acknowledgements</h3>
+<p>Thanks go out to the many Arduino forum users for outstanding help in testing and popularizing TinyGPS, this library’s predecessor. Thanks especially to Maarten Lamers, who wrote the <a href="http://www.maartenlamers.com/nmea/">wiring library</a> that originally gave me the idea of how to organize TinyGPS++. </p>
+<p>All input is appreciated.</p>
+<p>Mikal Hart</p>
+					
+            </div>
